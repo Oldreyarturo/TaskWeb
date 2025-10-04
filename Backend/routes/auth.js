@@ -1,6 +1,7 @@
 const express = require('express');
 const jwt = require('jsonwebtoken');
 const db = require('../config/database');
+const bcrypt = require('bcrypt');
 const router = express.Router();
 
 // 🔐 LOGIN
@@ -45,9 +46,8 @@ router.post('/login', async (req, res) => {
       const user = results[0];
       console.log(`✅ Usuario encontrado: ${user.nombreUsuario} (ID: ${user.idUsuario})`);
       
-      // Verificar contraseña (texto plano)
-      const isPasswordValid = contrasena === user.contrasena;
-      
+      const isPasswordValid = await bcrypt.compare(contrasena, user.contrasena);
+
       if (!isPasswordValid) {
         console.log(`❌ Contraseña incorrecta para: ${nombreUsuario}`);
         return res.status(401).json({ 

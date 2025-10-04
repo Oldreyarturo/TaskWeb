@@ -1,7 +1,26 @@
 // Frontend/src/services/api.ts
 import axios from 'axios';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import { Platform } from 'react-native';
 
-const API_BASE_URL = 'http://localhost:5000/api';
+// Configura la URL base según la plataforma
+const getBaseUrl = () => {
+  if (__DEV__) {
+    // En desarrollo, usa la IP de tu computadora para Expo Go
+    // Cambia esta IP por la de tu computadora en tu red local
+    return Platform.select({
+      // Para iOS en el simulador, localhost funciona
+      ios: 'http://localhost:5000/api',
+      // Para Android y Expo Go, necesitas usar la IP
+      android: 'http://192.168.18.6:5000/api',
+      default: 'http://localhost:5000/api',
+    });
+  }
+  // En producción usarías tu dominio real
+  return 'https://tu-api-produccion.com/api';
+};
+
+const API_BASE_URL = getBaseUrl();
 
 const api = axios.create({
   baseURL: API_BASE_URL,
@@ -13,8 +32,8 @@ const api = axios.create({
 
 // Interceptor para debugging
 api.interceptors.request.use(
-  (config) => {
-    const token = localStorage.getItem('token');
+  async (config) => {
+    const token = await AsyncStorage.getItem('token');
     if (token) {
       config.headers.Authorization = `Bearer ${token}`;
     }
@@ -36,7 +55,7 @@ api.interceptors.response.use(
     });
     return response;
   },
-  (error) => {
+  async (error) => {
     console.error('❌ Error en response:', {
       status: error.response?.status,
       message: error.message,
@@ -45,8 +64,8 @@ api.interceptors.response.use(
     });
     
     if (error.response?.status === 401) {
-      localStorage.removeItem('token');
-      localStorage.removeItem('user');
+      await AsyncStorage.removeItem('token');
+      await AsyncStorage.removeItem('user');
       console.log('Sesión expirada');
     }
     return Promise.reject(error);
@@ -74,23 +93,23 @@ export const tasksAPI = {
 
 // Helper functions para autenticación
 export const authHelper = {
-  saveAuthData: (token: string, user: any) => {
-    localStorage.setItem('token', token);
-    localStorage.setItem('user', JSON.stringify(user));
+  saveAuthData: async (token: string, user: any) => {
+    await AsyncStorage.setItem('token', token);
+    await AsyncStorage.setItem('user', JSON.stringify(user));
   },
   
-  clearAuthData: () => {
-    localStorage.removeItem('token');
-    localStorage.removeItem('user');
+  clearAuthData: async () => {
+    await AsyncStorage.removeItem('token');
+    await AsyncStorage.removeItem('user');
   },
   
-  getCurrentUser: () => {
-    const userData = localStorage.getItem('user');
+  getCurrentUser: async () => {
+    const userData = await AsyncStorage.getItem('user');
     return userData ? JSON.parse(userData) : null;
   },
   
-  getToken: () => {
-    return localStorage.getItem('token');
+  getToken: async () => {
+    return await AsyncStorage.getItem('token');
   }
 };
 

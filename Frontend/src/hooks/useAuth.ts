@@ -1,6 +1,7 @@
 // Frontend/src/hooks/useAuth.ts
 import { useState, useEffect } from 'react';
 import { authHelper } from '../services/api';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 export interface User {
   id: number;
@@ -12,12 +13,15 @@ export interface User {
 export const useAuth = () => {
   const [user, setUser] = useState<User | null>(null);
 
-  // Cargar usuario del localStorage al iniciar
+  // Cargar usuario del AsyncStorage al iniciar
   useEffect(() => {
-    const currentUser = authHelper.getCurrentUser();
-    if (currentUser) {
-      setUser(currentUser);
-    }
+    const loadUser = async () => {
+      const currentUser = await authHelper.getCurrentUser();
+      if (currentUser) {
+        setUser(currentUser);
+      }
+    };
+    loadUser();
   }, []);
 
   const isAdmin = () => user?.role === 'Administrador';

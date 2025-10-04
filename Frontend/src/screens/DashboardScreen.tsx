@@ -1,12 +1,29 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+
+interface User {
+  username: string;
+  [key: string]: any;
+}
 
 const DashboardScreen = ({ navigation }: any) => {
-  const user = JSON.parse(localStorage.getItem('user') || '{}');
+  const [user, setUser] = useState<User>({ username: '' });
 
-  const handleLogout = () => {
-    localStorage.removeItem('token');
-    localStorage.removeItem('user');
+  useEffect(() => {
+    loadUser();
+  }, []);
+
+  const loadUser = async () => {
+    const userData = await AsyncStorage.getItem('user');
+    if (userData) {
+      setUser(JSON.parse(userData));
+    }
+  };
+
+  const handleLogout = async () => {
+    await AsyncStorage.removeItem('token');
+    await AsyncStorage.removeItem('user');
     navigation.reset({
       index: 0,
       routes: [{ name: 'Login' }],

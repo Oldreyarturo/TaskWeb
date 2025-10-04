@@ -47,7 +47,7 @@ app.get('/api/db-status', (req, res) => {
 });
 
 // Iniciar servidor
-app.listen(PORT, () => {
+app.listen(PORT, '0.0.0.0', () => {
     console.log(`\n🎯 Servidor Express ejecutándose:`);
     console.log(`📍 URL: http://localhost:${PORT}`);
     console.log(`🕐 Iniciado: ${new Date().toLocaleString()}`);
