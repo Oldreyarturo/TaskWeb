@@ -1,0 +1,78 @@
+# TaskWeb .gitignore
+# Configuración para proyecto full-stack Node.js/Express + React Native/Expo
+
+### Dependencias ###
+# Node - tanto para Backend como Frontend
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+### Backend ###
+# Ambiente y configuración
+/Backend/.env
+/Backend/config/*.env
+/Backend/logs/
+*.log
+
+# Archivos temporales y caché
+*.tmp
+.cache/
+
+### Frontend ###
+# Expo/React Native
+.expo/
+.expo-shared/
+dist/
+web-build/
+expo-env.d.ts
+
+# Builds nativos
+/ios/
+/android/
+.kotlin/
+
+# Metro bundler
+.metro-health-check*
+.metro-cache/
+
+### Archivos de construcción ###
+build/
+dist/
+*.tsbuildinfo
+
+### Archivos sensibles ###
+*.jks
+*.p8
+*.p12
+*.key
+*.mobileprovision
+*.orig.*
+*.pem
+
+### Sistema Operativo ###
+# macOS
+.DS_Store
+# Windows
+Thumbs.db
+Desktop.ini
+# Linux
+*~
+
+### Editores ###
+# VSCode
+.vscode/*
+!.vscode/extensions.json
+!.vscode/launch.json
+# JetBrains
+.idea/
+*.iml
+
+### Base de datos ###
+*.sqlite
+*.sqlite3
+*.db
+
+# Archivos de bloqueo (opcional - considera mantenerlos versionados)
+# package-lock.json
+# yarn.lock
