@@ -2,25 +2,55 @@
 import axios from 'axios';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Platform } from 'react-native';
+import Constants from 'expo-constants';
+
+// Helper para mostrar la URL en desarrollo
+const logServerUrl = (url: string) => {
+  if (__DEV__) {
+    console.log(`
+      🔌 Conectando al servidor:
+      URL: ${url}
+      Platform: ${Platform.OS}
+      ${Platform.OS !== 'web' ? '📱 En dispositivo móvil usa la IP de tu PC' : '🌐 En web usa localhost'}
+    `);
+  }
+};
 
 // Configura la URL base según la plataforma
 const getBaseUrl = () => {
-  if (__DEV__) {
-    // En desarrollo, usa la IP de tu computadora para Expo Go
-    // Cambia esta IP por la de tu computadora en tu red local
-    return Platform.select({
-      // Para iOS en el simulador, localhost funciona
-      ios: 'http://localhost:5000/api',
-      // Para Android y Expo Go, necesitas usar la IP
-      android: 'http://192.168.18.6:5000/api',
-      default: 'http://localhost:5000/api',
-    });
+  // Producción
+  if (!__DEV__) return 'https://tu-api-produccion.com/api';
+
+  // Permitir override desde app.json / app.config.js -> extra.API_URL
+  const expoExtraApi = Constants.manifest?.extra?.API_URL ?? Constants.expoConfig?.extra?.API_URL;
+  if (expoExtraApi) return expoExtraApi;
+
+  // Web usa localhost
+  if (Platform.OS === 'web') return 'http://localhost:5000/api';
+
+  // En Expo (Android/iOS) intentar deducir la IP desde el debuggerHost
+  const debuggerHost = Constants.manifest?.debuggerHost ?? Constants.expoConfig?.extra?.debuggerHost;
+  if (debuggerHost) {
+    const host = debuggerHost.split(':')[0];
+    return `http://${host}:5000/api`;
   }
-  // En producción usarías tu dominio real
-  return 'https://tu-api-produccion.com/api';
+
+  // Si no se pudo obtener la IP de ninguna manera, mostramos un error útil
+  console.error(`
+    ⚠️ No se pudo determinar la IP del servidor automáticamente.
+    
+    Para solucionar esto:
+    1. Asegúrate de que el servidor backend está corriendo (npm run dev en la carpeta Backend)
+    2. Verifica que tu dispositivo y PC están en la misma red WiFi
+    3. El servidor debe estar escuchando en 0.0.0.0:5000
+  `);
+  // Usar localhost como último recurso (funcionará en web)
+  return 'http://localhost:5000/api';
 };
 
 const API_BASE_URL = getBaseUrl();
+// Log de la URL en desarrollo para debugging
+logServerUrl(API_BASE_URL);
 
 const api = axios.create({
   baseURL: API_BASE_URL,
