@@ -86,53 +86,41 @@ const LoginScreen = ({ navigation }: any) => {
     setLoginError('');
 
     try {
-      console.log('🔐 Intentando login con:', username);
-      
       const response = await authAPI.login({
         nombreUsuario: username,
         contrasena: password
       });
 
-      console.log('✅ Respuesta del login:', response.data);
+      // Login exitoso
+      await authHelper.saveAuthData(response.data.token, response.data.user);
+      auth.setUser(response.data.user);
+      
+      // Animación de éxito antes de navegar
+      Animated.parallel([
+        Animated.timing(fadeAnim, {
+          toValue: 0,
+          duration: 500,
+          useNativeDriver: true,
+        }),
+        Animated.timing(slideAnim, {
+          toValue: -50,
+          duration: 500,
+          useNativeDriver: true,
+        }),
+      ]).start(() => {
+        navigation.replace('Dashboard');
+      });
 
-      if (response.data.success) {
-        // Guardar datos usando el helper
-        authHelper.saveAuthData(response.data.token, response.data.user);
-        auth.setUser(response.data.user);
-        
-        console.log('👤 Usuario guardado:', response.data.user);
-        
-        // Animación de éxito antes de navegar
-        Animated.parallel([
-          Animated.timing(fadeAnim, {
-            toValue: 0,
-            duration: 500,
-            useNativeDriver: true,
-          }),
-          Animated.timing(slideAnim, {
-            toValue: -50,
-            duration: 500,
-            useNativeDriver: true,
-          }),
-        ]).start(() => {
-          navigation.replace('Dashboard');
-        });
-      } else {
-        setLoginError(response.data.message || 'Error en el login');
-      }
     } catch (error: unknown) {
       const apiError = error as ApiError;
-      console.error('❌ Error en login:', apiError);
       
-      // Mostrar error en leyenda
-      if (apiError.response?.status === 404 || apiError.response?.status === 401) {
-        setLoginError('Usuario o contraseña incorrectos');
-      } else if (apiError.response?.data?.message) {
-        setLoginError(apiError.response.data.message);
+      if (apiError.response?.status === 401) {
+        // Error de credenciales
+        setLoginError(apiError.response.data?.message || 'Usuario o contraseña incorrectos');
       } else if (apiError.message.includes('Network Error')) {
         setLoginError('Error de conexión. Verifica tu internet o que el servidor esté ejecutándose.');
       } else {
-        setLoginError('Error al iniciar sesión');
+        setLoginError('Error al intentar iniciar sesión. Intenta de nuevo.');
       }
     } finally {
       setLoading(false);

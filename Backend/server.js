@@ -1,13 +1,20 @@
 const express = require('express');
 const cors = require('cors');
+const bodyParser = require('body-parser');
+const cookieParser = require('cookie-parser');
 require('dotenv').config();
 
 const app = express();
 const PORT = process.env.SERVER_PORT || 5000;
 
-// ✅ MIDDLEWARS PRIMERO - antes de las rutas
+// Configuración de seguridad y middlewares
 app.use(cors());
-app.use(express.json());
+app.use(bodyParser.json());
+app.use(bodyParser.urlencoded({ extended: false }));  // Deshabilitar extended para mayor seguridad
+app.use(cookieParser());
+
+// Límites para prevenir DoS
+app.use(bodyParser.json({limit: '10kb'}));  // Limitar tamaño del payload
 
 // Importar conexión a MySQL (se mostrará en consola al iniciar)
 const db = require('./config/database');

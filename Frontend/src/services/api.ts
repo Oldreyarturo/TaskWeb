@@ -21,29 +21,65 @@ const getBaseUrl = () => {
   // Producción
   if (!__DEV__) return 'https://tu-api-produccion.com/api';
 
-  // Permitir override desde app.json / app.config.js -> extra.API_URL
-  const expoExtraApi = Constants.manifest?.extra?.API_URL ?? Constants.expoConfig?.extra?.API_URL;
-  if (expoExtraApi) return expoExtraApi;
+  // 1. Primero intentar obtener del config (app.json o app.config.js)
+  const configApiUrl = Constants.expoConfig?.extra?.API_URL ?? Constants.manifest?.extra?.API_URL;
+  if (configApiUrl) return configApiUrl;
 
   // Web usa localhost
   if (Platform.OS === 'web') return 'http://localhost:5000/api';
 
-  // En Expo (Android/iOS) intentar deducir la IP desde el debuggerHost
-  const debuggerHost = Constants.manifest?.debuggerHost ?? Constants.expoConfig?.extra?.debuggerHost;
-  if (debuggerHost) {
-    const host = debuggerHost.split(':')[0];
-    return `http://${host}:5000/api`;
+  // 2. Intentar obtener la IP del host de varias fuentes (Expo 54+)
+  const possibleHosts = [
+    Constants.manifest?.debuggerHost,                    // Classic
+    Constants.manifest?.hostUri?.split(':')[0],         // Expo 54+
+    Constants.expoConfig?.hostUri?.split(':')[0],       // Alternative
+    Constants.manifest?.packagerOpts?.dev 
+      ? Constants.manifest?.packagerOpts?.host          // Dev mode
+      : null,
+    Constants.expoConfig?.extra?.debuggerHost,          // Custom config
+  ].filter(Boolean);
+
+  // Usar el primer host válido que encontremos
+  for (const host of possibleHosts) {
+    if (host && host !== 'localhost') {
+      console.log('✅ IP detectada:', host);
+      return `http://${host}:5000/api`;
+    }
   }
 
   // Si no se pudo obtener la IP de ninguna manera, mostramos un error útil
-  console.error(`
-    ⚠️ No se pudo determinar la IP del servidor automáticamente.
-    
-    Para solucionar esto:
-    1. Asegúrate de que el servidor backend está corriendo (npm run dev en la carpeta Backend)
-    2. Verifica que tu dispositivo y PC están en la misma red WiFi
-    3. El servidor debe estar escuchando en 0.0.0.0:5000
-  `);
+  console.error('\n⚠️ No se pudo determinar la IP del servidor automáticamente.');
+  console.error('\nInformación de diagnóstico:');
+  console.log('Platform:', Platform.OS);
+  console.log('Expo Config:', {
+    manifest: {
+      debuggerHost: Constants.manifest?.debuggerHost,
+      hostUri: Constants.manifest?.hostUri,
+      packagerOpts: Constants.manifest?.packagerOpts
+    },
+    expoConfig: {
+      hostUri: Constants.expoConfig?.hostUri,
+      extra: Constants.expoConfig?.extra
+    }
+  });
+  
+  console.error('\nPara solucionar esto:');
+  console.error('1) Asegúrate de que:');
+  console.error('   - El servidor backend está corriendo (npm run dev en Backend)');
+  console.error('   - El servidor escucha en 0.0.0.0:5000');
+  console.error('   - Tu dispositivo y PC están en la misma red WiFi');
+  console.error('\n2) Intenta reiniciar Expo con:');
+  console.error('   npx expo start --lan -c');
+  console.error('   # o si usas tunnel:');
+  console.error('   npx expo start --tunnel');
+  console.error('\n3) Si el problema persiste, configura la IP manualmente en app.json:');
+  console.error('   {');
+  console.error('     "expo": {');
+  console.error('       "extra": {');
+  console.error('         "API_URL": "http://TU-IP-LOCAL:5000/api"');
+  console.error('       }');
+  console.error('     }');
+  console.error('   }');
   // Usar localhost como último recurso (funcionará en web)
   return 'http://localhost:5000/api';
 };
@@ -78,26 +114,36 @@ api.interceptors.request.use(
 
 api.interceptors.response.use(
   (response) => {
-    console.log('✅ Response exitoso:', {
-      status: response.status,
-      url: response.config.url,
-      data: response.data
-    });
+    // Log de respuestas exitosas solo en desarrollo
+    if (__DEV__) {
+      console.log('✅ Response exitoso:', {
+        status: response.status,
+        url: response.config.url,
+        data: response.data
+      });
+    }
     return response;
   },
   async (error) => {
-    console.error('❌ Error en response:', {
-      status: error.response?.status,
-      message: error.message,
-      url: error.config?.url,
-      data: error.response?.data
-    });
+    const isLoginError = error.config?.url?.includes('/auth/login') && error.response?.status === 401;
     
-    if (error.response?.status === 401) {
+    // No mostrar 401 de login como error en consola
+    if (!isLoginError && __DEV__) {
+      console.error('❌ Error en response:', {
+        status: error.response?.status,
+        message: error.message,
+        url: error.config?.url,
+        data: error.response?.data
+      });
+    }
+    
+    // Limpiar sesión en 401 (excepto en login)
+    if (error.response?.status === 401 && !isLoginError) {
       await AsyncStorage.removeItem('token');
       await AsyncStorage.removeItem('user');
-      console.log('Sesión expirada');
+      if (__DEV__) console.log('Sesión expirada');
     }
+
     return Promise.reject(error);
   }
 );
